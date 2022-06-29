@@ -2,16 +2,15 @@ sgx.nonpie_binary = true
 sgx.enclave_size = "1024M"
 sgx.thread_num = 8
 
-loader.env.LD_PRELOAD = "/libsecret_prov_attest.so"
-
+loader.env.LD_PRELOAD = "/gramine/meson_build_output/lib/x86_64-linux-gnu/libsecret_prov_attest.so"
 loader.env.SECRET_PROVISION_SERVERS = { passthrough = true }
 loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
 # loader.env.SECRET_PROVISION_SET_KEY = "default"
-# loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "/ca.crt"
+loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "/ca.crt"
 
 # Placeholder for environment variables
 
-# sgx.remote_attestation = true
+sgx.remote_attestation = "dcap"
 
 sgx.allowed_files = [
   "file:/etc/host.conf",

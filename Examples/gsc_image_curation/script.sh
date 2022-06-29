@@ -127,12 +127,12 @@ if [ "$attestation_required" = "y" ]; then
     cp $ca_cert_path ca.crt
     sed -i 's|.*crt.*|COPY ca.crt /ca.crt|' $wrapper_dockerfile
     sed -i 's|.*ENV ATTESTATION_REQUIRED.*|ENV ATTESTATION_REQUIRED="true"|' $wrapper_dockerfile
-    sed -i 's|.*remote_attestation.*|sgx.remote_attestation = true|' $app_image_manifest
+    sed -i 's|.*remote_attestation.*|sgx.remote_attestation = "dcap"|' $app_image_manifest
     sed -i 's|.*SECRET_PROVISION_CA_CHAIN_PATH.*|loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "/ca.crt"|' $app_image_manifest
 else
     sed -i 's|.*crt.*|# COPY ca.crt /ca.crt|' $wrapper_dockerfile
     sed -i 's|.*ENV ATTESTATION_REQUIRED.*|ENV ATTESTATION_REQUIRED="false"|' $wrapper_dockerfile
-    sed -i 's|.*remote_attestation.*|# sgx.remote_attestation = true|' $app_image_manifest
+    sed -i 's|.*remote_attestation.*|# sgx.remote_attestation = "dcap"|' $app_image_manifest
     sed -i 's|.*SECRET_PROVISION_CA_CHAIN_PATH.*|# loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "/ca.crt"|' $app_image_manifest
     sed -i 's|.*SECRET_PROVISION_SET_KEY.*|# loader.env.SECRET_PROVISION_SET_KEY = "default"|' $app_image_manifest
     sed -i '/{ path/d' $app_image_manifest
@@ -224,16 +224,21 @@ if [ "$attestation_required" = "y" ]; then
 fi
 # Download gsc that has dcap already enabled
 echo ""
-#rm -rf gsc
-#git clone https://github.com/gramineproject/gsc.git
-#git clone https://github.com/veenasai2/gsc.git
-#cd gsc
-#git checkout gsc_with_dcap
-#cd ../
+rm -rf gsc
+# git clone https://github.com/gramineproject/gsc.git
+
+# Todo: Remove these steps once https://github.com/gramineproject/gsc/pull/70
+git clone https://github.com/aneessahib/gsc.git
+cd gsc
+git checkout builddcap
+cd ../
 
 cp $signing_key_path gsc/enclave-key.pem
 cd gsc
 cp config.yaml.template config.yaml
+
+# Clone latest gramine master code for gsc
+sed -i 's|v1.2|master|' config.yaml
 
 # Set SGX driver as dcap (this helps to generated an Azure compatible image)
 sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
