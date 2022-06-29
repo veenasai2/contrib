@@ -280,7 +280,7 @@ else
         echo "docker run --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=<server-dns_name:port> -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
     else
         echo "You can run the gsc-"$app_image" using the below command: "
-        echo "docker run --net=host --device=/dev/sgx/enclave -it gsc-$app_image"
+        echo "docker run --device=/dev/sgx/enclave -it gsc-$app_image"
     fi
 fi
 
