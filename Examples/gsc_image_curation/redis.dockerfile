@@ -1,4 +1,4 @@
-From redis:7.0.0
+From
 
 COPY ca.crt /ca.crt
 

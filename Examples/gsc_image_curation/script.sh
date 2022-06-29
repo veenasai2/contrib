@@ -18,13 +18,9 @@ do
 done
 
 if [ "$start" = "p" ]; then
-    default_base_image="pytorch/pytorch"
     start="pytorch"
 else
-    default_base_image="redis:7.0.0"
     start="redis"
-    entry_script=entry_script.sh
-    entry_script_with_attestation=entry_script_with_attestation.sh
 fi
 
 app_image=$start"_image"
@@ -45,29 +41,28 @@ sed -i "s|.*# User Provided Environment Variables.*|# Placeholder for environmen
 # Get Base image name
 base_image=""
 echo ""
-echo "Kindly provide a base image name [default: "$default_base_image"]"
+echo "Kindly provide a base image name"
 echo "[Note: Please ensure all the required files are part of the base image]"
-read -p "Base image name [press ENTER for default] -> " base_image
+read -p "Base image name -> " base_image
 
-if [ -z "${base_image}" ]; then
-    echo "No base image provided by the user, going with the default image: "$default_base_image
-    sed -i 's|From.*|From '$default_base_image'|' $wrapper_dockerfile
-    base_image=$default_base_image
-else
-    while [ "$(docker images -q "$base_image" 2> /dev/null)" == "" ];
+while [ -z "${base_image}" ];
+do
+    read -p "No base image provided by the user, please provide a valid base image -> " base_image
+done
+
+while [ "$(docker images -q "$base_image" 2> /dev/null)" == "" ];
     do
         echo ""$base_image" is not present locally, hence fetching from dockerhub"
         docker pull $base_image
         if [[ "$(docker images -q "$base_image" 2> /dev/null)" == "" ]]; then
             read -p "Kindly provide a correct base image name -> " base_image
-            if [ -z "${base_image}" ]; then
-                base_image=$default_base_image
-            fi
+            while [ -z "${base_image}" ];
+            do
+                read -p "No base image provided by the user, please provide a valid base image -> " base_image
+            done
         fi
     done
-    sed -i 's|From.*|From '$base_image'|' $wrapper_dockerfile
-fi
-
+sed -i 's|From.*|From '$base_image'|' $wrapper_dockerfile
 
 # Signing key
 echo ""
@@ -251,7 +246,7 @@ docker rmi -f gsc-$app_image
 docker rmi -f gsc-$app_image-unsigned
 
 echo ""
-echo "******************************* Building GSC Image *******************************"
+echo "******************************* GSC Image is ready to run *******************************"
 echo ""
 
 ./gsc build $app_image  test/$app_image_manifest
@@ -280,7 +275,7 @@ else
         echo "docker run --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=<server-dns_name:port> -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
     else
         echo "You can run the gsc-"$app_image" using the below command: "
-        echo "docker run --device=/dev/sgx/enclave -it gsc-$app_image"
+        echo "docker run --net=host --device=/dev/sgx/enclave -it gsc-$app_image"
     fi
 fi
 

@@ -1,4 +1,4 @@
-From pytorch-encrypted
+From
 
 COPY ca.crt /ca.crt
 
