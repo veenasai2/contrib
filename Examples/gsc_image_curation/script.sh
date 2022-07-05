@@ -237,7 +237,7 @@ cp config.yaml.template config.yaml
 
 # ToDo: Remove these two lines once https://github.com/gramineproject/gramine/pull/722 and https://github.com/gramineproject/gramine/pull/721 merged
 sed -i 's|    Repository: "https://github.com/gramineproject/gramine.git"|    Repository: "https://github.com/aneessahib/gramine.git"|' config.yaml
-sed -i 's|v1.2|script_secret|' config.yaml
+sed -i 's|v1.2|secret_prov|' config.yaml
 
 # Set SGX driver as dcap (this helps to generated an Azure compatible image)
 sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
