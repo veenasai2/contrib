@@ -1,8 +1,6 @@
 From
 
-COPY ca.crt /ca.crt
-
-ENV ATTESTATION_REQUIRED="true"
+# COPY ca.crt /ca.crt
 
 # These two lines are required as redis has a script entrypoint (https://github.com/gramineproject/graphene/issues/1728)
 COPY entry_script_redis.sh /usr/local/bin/entry_script_redis.sh

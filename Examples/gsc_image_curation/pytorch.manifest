@@ -3,26 +3,4 @@ sgx.enclave_size = "8G"
 sgx.thread_num = 128
 loader.pal_internal_mem_size = "128M"
 
-loader.env.LD_PRELOAD = "/gramine/meson_build_output/lib/x86_64-linux-gnu/libsecret_prov_attest.so"
-loader.env.SECRET_PROVISION_SERVERS = { passthrough = true }
-loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
-loader.env.SECRET_PROVISION_SET_KEY = "default"
-loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "/ca.crt"
-
-# Placeholder for environment variables
-
-sgx.remote_attestation = "dcap"
-
-sgx.allowed_files = [
-  "file:/etc/host.conf",
-  "file:/etc/hosts",
-  "file:/etc/resolv.conf",
-]
-
-fs.mounts = [
-  { path = "/workspace/classes.txt", uri = "file:classes.txt", type = "encrypted" },
-  { path = "/workspace/input.jpg", uri = "file:input.jpg", type = "encrypted" },
-  { path = "/workspace/alexnet-pretrained.pt", uri = "file:alexnet-pretrained.pt", type = "encrypted" },
-  { path = "/workspace/app/result.txt", uri = "file:app/result.txt", type = "encrypted" },
-]  #encrypted_files
-
+# Based on user input the manifest file will automatically be modified after this line
