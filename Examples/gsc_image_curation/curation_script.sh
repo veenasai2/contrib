@@ -6,18 +6,14 @@ echo ""
 echo ""
 
 echo "Current version of this script tested for redis and pytorch only"
-echo "Please type r for redis and p for pytorch"
-echo -n "r/p: "
-read -r start
+read -p "Please type 1 for redis and 2 for pytorch -> " start
 
-while [[ "$start" != "r"  && "$start" != "p" ]];
+while [[ "$start" != "1"  && "$start" != "2" ]];
 do
-    echo "You have entered a wrong option, please type r or p only"
-    echo -n "r/p: "
-    read -r start
+    read -p "You have entered a wrong option, please type 1 or 2 only -> " start
 done
 
-if [ "$start" = "p" ]; then
+if [ "$start" = "2" ]; then
     start="pytorch"
 else
     start="redis"
@@ -37,8 +33,8 @@ sed -i '0,/# Based on user input the manifest file will automatically be modifie
 base_image=""
 echo ""
 echo "Please specify a base image name"
-echo "[Note: Please ensure all the files required for the image at runtime are part of the base image."
-echo "       Gramine ignores any files that are passed as arguments during runtime.]"
+echo "[Note: Please ensure all the files and args required for the image at runtime are part of the base image."
+echo "       Gramine ignores any files and args that are passed during runtime.]"
 read -p "Base image name -> " base_image
 
 while [ -z "${base_image}" ];
@@ -109,7 +105,14 @@ done
 echo ""
 
 if [ "$attestation_required" = "y" ]; then
-    read -p "Please specify path to your verifier ca certificate (crt format only) -> " ca_cert_path
+    echo "We are going to generate the verifier docker image first"
+    cd verifier_image
+    ./verifier_helper_script.sh
+    cd ../
+    echo ""
+    echo ""
+    echo "Please specify path to your verifier ca certificate (crt format only)"
+    read -p "Suggestions : verifier_image/ca.crt  -> " ca_cert_path 
     while [ ! -f "$ca_cert_path" ]
     do
         echo "Error: "$ca_cert_path" file does not exist."
@@ -179,11 +182,11 @@ if [ "$attestation_required" = "y" ]; then
     echo ""
 
     if [ "$encrypted_files_required" = "y" ]; then
-        echo "Please specify list of valid encrypted file names (or path relative to workdir), separated by a semi colon."
+        echo "Please specify list of valid encrypted file names (or path relative to workdir), separated by a colon."
         echo "Here, we will put base image workdir as a prefix to the filename or the path provided by the user."
         echo "Please provide the file names as referred by scripts in the base image."
-        read -p "Accepted format: file1;path_relative_path/file2;file3 (e.g. classes.txt;app/result.txt) -> " ef_files
-        IFS=';' #setting semi colon as delimiter
+        read -p "Accepted format: file1:path_relative_path/file2:file3 (e.g. classes.txt:app/result.txt) -> " ef_files
+        IFS=':' #setting colon as delimiter
         read -a ef_files_list <<<"$ef_files"
 	echo '' >> $app_image_manifest
         echo '# User Provided Encrypted files' >> $app_image_manifest
@@ -273,10 +276,16 @@ else
     echo ""
     if [ "$attestation_required" = "y" ]; then
         echo "Please ensure your remote attestation verifier is ready to accept the connection **from this device/container**"
-        echo "Also, the ca certificate for the verifier should be same as what you have given in the beginning of the script"
-        echo""
+        echo "You can start the verifier using the below command"
+	echo "docker run  --net=host  --device=/dev/sgx/enclave  -it verifier_image:latest"
+        echo ""
+	echo ""
         echo "You can run the gsc-"$app_image" using the below command:"
-	echo "Please use --net=host also with the below commmand, if the verifier is running on localhost"
+	echo ""
+	echo "Please use the below commmand, if the verifier is running on localhost"
+	echo "docker run --net=host --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=\"localhost:4433\" -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
+	echo ""
+	echo ""
         echo "docker run --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=<server-dns_name:port> -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
     else
         echo "You can run the gsc-"$app_image" using the below command: "
