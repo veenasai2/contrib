@@ -6,7 +6,7 @@ echo ""
 echo ""
 
 echo "Current version of this script tested for redis and pytorch only"
-read -p "Please type 1 for redis and 2 for pytorch -> " start
+read -p "Please select 1. redis and 2. pytorch -> " start
 
 while [[ "$start" != "1"  && "$start" != "2" ]];
 do
@@ -112,7 +112,7 @@ if [ "$attestation_required" = "y" ]; then
     echo ""
     echo ""
     echo "Please specify path to your verifier ca certificate (crt format only)"
-    read -p "Suggestions : verifier_image/ca.crt  -> " ca_cert_path 
+    read -p "Suggestions : verifier_image/ca.crt  -> " ca_cert_path
     while [ ! -f "$ca_cert_path" ]
     do
         echo "Error: "$ca_cert_path" file does not exist."
@@ -286,6 +286,7 @@ else
 	echo "docker run --net=host --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=\"localhost:4433\" -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
 	echo ""
 	echo ""
+	echo "If the verifier is not running on the localhost, then use below command"
         echo "docker run --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=<server-dns_name:port> -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
     else
         echo "You can run the gsc-"$app_image" using the below command: "
