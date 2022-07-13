@@ -5,6 +5,87 @@ echo "################################# Welcome to GSC Image Curation Script ###
 echo ""
 echo ""
 
+# Creating a default  test image for the user
+echo "Do you want to get a test redis gsc image ?"
+echo -n "y/n: "
+read -r default_image
+
+while [[ "$default_image" != "y"  && "$default_image" != "n" ]];
+do
+    echo "You have entered a wrong option, please type y or n only"
+    echo -n "y/n: "
+    read -r default_image
+done
+
+echo ""
+
+if [ "$default_image" = "y" ]; then
+    start="redis"
+    wrapper_dockerfile=$start"-gsc.dockerfile"
+    app_image_manifest=$start".manifest"
+
+    # Bringing the dockerfile to default
+    sed -i 's|.*ca.crt.*|# COPY ca.crt /ca.crt|' $wrapper_dockerfile
+
+    # Bringing the manifest file to default
+    sed -i '0,/# Based on user input the manifest file will automatically be modified after this line/I!d' $app_image_manifest
+
+    base_image=redis:7.0.0
+    sed -i 's|From.*|From '$base_image'|' $wrapper_dockerfile
+    app_image=$base_image"-wrapper"
+    echo ""
+
+    docker rmi -f $app_image >/dev/null 2>&1
+    docker build -f $wrapper_dockerfile -t $app_image .
+
+    # Download gsc that has dcap already enabled
+    echo ""
+    rm -rf gsc >/dev/null 2>&1
+    # git clone https://github.com/gramineproject/gsc.git
+
+    # Todo: Remove these steps once https://github.com/gramineproject/gsc/pull/70
+    git clone https://github.com/aneessahib/gsc.git
+    cd gsc
+    git checkout binary_path
+    
+    cp config.yaml.template config.yaml
+    openssl genrsa -3 -out enclave-key.pem 3072
+    # ToDo: Remove these two lines once https://github.com/gramineproject/gramine/pull/722 and https://github.com/gramineproject/gramine/pull/721 merged
+    sed -i 's|    Repository: "https://github.com/gramineproject/gramine.git"|    Repository: "https://github.com/aneessahib/gramine.git"|' config.yaml
+    sed -i 's|master|script_secret2|' config.yaml
+
+    # Set SGX driver as dcap (this helps to generated an Azure compatible image)
+    sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
+    sed -i 's|    Branch:     ""|    Branch:     "DCAP_1.11 \&\& cp -r driver/linux/* ."|' config.yaml
+
+    cp ../$app_image_manifest test/
+    # Delete already existing gsc image for the base image
+    docker rmi -f gsc-$app_image >/dev/null 2>&1
+    docker rmi -f gsc-$app_image-unsigned >/dev/null 2>&1
+
+    ./gsc build $app_image  test/$app_image_manifest
+    echo ""
+    echo ""
+    ./gsc sign-image $app_image enclave-key.pem
+
+    cd ../
+    rm -rf gsc >/dev/null 2>&1
+    if [[ "$(docker images -q "gsc-$app_image" 2> /dev/null)" == "" ]]; then
+        echo ""
+        echo ""
+        echo ""gsc-$app_image" creation failed, exiting .... "
+        echo ""
+        exit 1
+    else
+        echo ""
+        echo "You can run the gsc-"$app_image" using the below command: "
+        echo ""
+        echo "docker run  --device=/dev/sgx/enclave -it gsc-$app_image"
+    fi
+exit 1
+fi
+
+# Customized GSC Image Creation Flow
 echo "Current version of this script tested for redis and pytorch only"
 read -p "Please select 1. redis and 2. pytorch -> " start
 
@@ -227,7 +308,7 @@ rm -rf gsc >/dev/null 2>&1
 # Todo: Remove these steps once https://github.com/gramineproject/gsc/pull/70
 git clone https://github.com/aneessahib/gsc.git
 cd gsc
-git checkout builddcap
+git checkout binary_path
 cd ../
 
 cp $signing_key_path gsc/enclave-key.pem
@@ -240,7 +321,7 @@ cp config.yaml.template config.yaml
 
 # ToDo: Remove these two lines once https://github.com/gramineproject/gramine/pull/722 and https://github.com/gramineproject/gramine/pull/721 merged
 sed -i 's|    Repository: "https://github.com/gramineproject/gramine.git"|    Repository: "https://github.com/aneessahib/gramine.git"|' config.yaml
-sed -i 's|v1.2|secret_prov|' config.yaml
+sed -i 's|master|script_secret2|' config.yaml
 
 # Set SGX driver as dcap (this helps to generated an Azure compatible image)
 sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
