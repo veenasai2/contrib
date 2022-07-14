@@ -1,7 +1,7 @@
 #!/bin/bash
 rm -rf gramine >/dev/null 2>&1
 
-git clone --depth 1 https://github.com/gramineproject/gramine.git
+/bin/sh install_gramine.sh
 
 cd gramine/CI-Examples/ra-tls-secret-prov
 make clean && make dcap >/dev/null 2>&1
