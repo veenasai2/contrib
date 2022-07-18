@@ -249,8 +249,10 @@ fi
 
 # Encrypted Files Section
 if [ "$attestation_required" = "y" ]; then
-    echo "Do you have encrypted files to add in the manifest?"
-    echo "(Please get familiar with encrypted files here: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#encrypted-files)"
+    echo "Do you need to provide encrytped files?"
+    echo "Please ensure the encrypted files are part of the base image dockerfile."
+    echo "You can use this dockerfile (gsc_image_creation/pytorch/pytorch_with_encrypted_files/) as a reference to create a base image with encrypted files."
+    echo "To know more about encrypted files please follow this link: https://gramine.readthedocs.io/en/stable/manifest-syntax.html#encrypted-files"
     echo -n "y/n: "
     read -r encrypted_files_required
 
@@ -263,10 +265,11 @@ if [ "$attestation_required" = "y" ]; then
     echo ""
 
     if [ "$encrypted_files_required" = "y" ]; then
-        echo "Please specify list of valid encrypted file names (or path relative to workdir), separated by a colon."
-        echo "Here, we will put base image workdir as a prefix to the filename or the path provided by the user."
-        echo "Please provide the file names as referred by scripts in the base image."
-        read -p "Accepted format: file1:path_relative_path/file2:file3 (e.g. classes.txt:app/result.txt) -> " ef_files
+	echo "Please provide the path to the encrypted files in the base image separated by a colon (:)"
+	echo "Accepted format: file1:path_relative_path/file2:file3"
+        echo "E.g., for gsc_image_creation/pytorch/pytorch_with_encrypted_files/Dockerfile based image, the encrypted files input would be --> "
+	echo "classes.txt:input.jpg:alexnet-pretrained.pt:app/result.txt"
+        read -p "Your input here -> " ef_files
         IFS=':' #setting colon as delimiter
         read -a ef_files_list <<<"$ef_files"
 	echo '' >> $app_image_manifest
