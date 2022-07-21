@@ -1,6 +1,10 @@
-# GSC Image Curation Script
+# Curate your own Gramine Shielded Container image
 
-Here, we will put some details about the script.
+This guide demonstrates how one can transform any container image to a graminized one, packing
+features such as attestation and beyond, necessary for enabling end to end usescases securely.
+A list of examples are provided below for reference. One can easily extend these reference examples
+to supporting more workloads by inspecting the contents of any of the reference workloads
+(for e.g. /redis/).
 
 ## Prerequisites
 
@@ -12,22 +16,25 @@ $ sudo apt-get install docker.io python3 python3-pip
 $ pip3 install docker jinja2 toml pyyaml
 ```
 
-## User can view these pre-curated Gramine Confidential Compute Images
+## Sample Workloads
 
-### Gramine curated app's Redis:7.0.0 Confidential Compute Image
+(1) Redis
 
-```sh
-$ docker pull veenacontainerregistry.azurecr.io/gsc-redis-image_700_preview
+Want to genenerate a preconfigured test graminized image for redis:7.0.0 dockerhub image? All you
+need to do is execute the gsc curation script as given below. At the end of the curation, the script
+will also advise how to run the graminized image with docker.
 
-$ docker run  --device=/dev/sgx/enclave -it veenacontainerregistry.azurecr.io/gsc-redis-image_700_preview
-```
+`$ ./curation_script redis/redis:7.0.0 test`
 
-### Gramine curated app's Pytorch Confidential Compute Image
+To generate a custom image
+`$ ./curation_script redis/<your image>`
 
-Please refer `gsc_image_curation/pytorch/pytorch_with_plain_text_files` to see the contents of this image
 
-```sh
-$ docker pull veenacontainerregistry.azurecr.io/gsc-pytorch-image
+(2) Pytorch
 
-$ docker run  --device=/dev/sgx/enclave -it veenacontainerregistry.azurecr.io/gsc-pytorch-image
-```
+To generate a preconfigured test graminized image for pytorch:x dockerhub image
+
+`$ ./curation_script pytorch/<pytorch_image> test`
+
+To generate a custom image
+`$ ./curation_script pytorch/<your image>`
