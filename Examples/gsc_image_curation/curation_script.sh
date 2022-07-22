@@ -21,6 +21,8 @@ echo ""
 
 if [ "$default_image" = "y" ]; then
     start="redis"
+
+    cd $start
     wrapper_dockerfile=$start"-gsc.dockerfile"
     app_image_manifest=$start".manifest"
 
@@ -37,6 +39,9 @@ if [ "$default_image" = "y" ]; then
 
     docker rmi -f $app_image >/dev/null 2>&1
     docker build -f $wrapper_dockerfile -t $app_image .
+
+    # Exit from $start directory
+    cd ..
 
     # Download gsc that has dcap already enabled
     echo ""
@@ -58,7 +63,8 @@ if [ "$default_image" = "y" ]; then
     sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
     sed -i 's|    Branch:     ""|    Branch:     "DCAP_1.11 \&\& cp -r driver/linux/* ."|' config.yaml
 
-    cp ../$app_image_manifest test/
+    cp ../$start/$app_image_manifest test/
+
     # Delete already existing gsc image for the base image
     docker rmi -f gsc-$app_image >/dev/null 2>&1
     docker rmi -f gsc-$app_image-unsigned >/dev/null 2>&1
@@ -68,6 +74,7 @@ if [ "$default_image" = "y" ]; then
     echo ""
     ./gsc sign-image $app_image enclave-key.pem
 
+    # Exit from gsc directory
     cd ../
     rm -rf gsc >/dev/null 2>&1
     if [[ "$(docker images -q "gsc-$app_image" 2> /dev/null)" == "" ]]; then
@@ -102,6 +109,8 @@ fi
 
 wrapper_dockerfile=$start"-gsc.dockerfile"
 app_image_manifest=$start".manifest"
+
+cd $start
 
 # Bringing the dockerfile to default
 sed -i 's|.*ca.crt.*|# COPY ca.crt /ca.crt|' $wrapper_dockerfile
@@ -166,8 +175,11 @@ if [ "$signing_key_present" = "y" ]; then
     done
 else
     echo "Generating signing key"
+    #Exiting $start directory as we want enclave key to be present in $gsc_image_creation directory
+    cd ..
     openssl genrsa -3 -out enclave-key.pem 3072
     signing_key_path="enclave-key.pem"
+    cd $start
 fi
 
 
@@ -187,13 +199,13 @@ echo ""
 
 if [ "$attestation_required" = "y" ]; then
     echo "We are going to generate the verifier docker image first"
-    cd verifier_image
+    cd ../verifier_image
     ./verifier_helper_script.sh
-    cd ../
+    cd ../$start
     echo ""
     echo ""
     echo "Please specify path to your verifier ca certificate (crt format only)"
-    read -p "Suggestions : verifier_image/ca.crt  -> " ca_cert_path
+    read -p "Suggestions : ../verifier_image/ca.crt  -> " ca_cert_path
     while [ ! -f "$ca_cert_path" ]
     do
         echo "Error: "$ca_cert_path" file does not exist."
@@ -297,12 +309,17 @@ fi
 echo ""
 echo "******************************* Generating Wrapper Image for Base Image *******************************"
 echo ""
+
 docker rmi -f $app_image >/dev/null 2>&1
 docker build -f $wrapper_dockerfile -t $app_image .
 echo ""
 if [ "$attestation_required" = "y" ]; then
     rm ca.crt
 fi
+
+# Exit from $start directory
+cd ..
+
 # Download gsc that has dcap already enabled
 echo ""
 rm -rf gsc >/dev/null 2>&1
@@ -330,7 +347,7 @@ sed -i 's|v1.2|script_secret2|' config.yaml
 sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
 sed -i 's|    Branch:     ""|    Branch:     "DCAP_1.11 \&\& cp -r driver/linux/* ."|' config.yaml
 
-cp ../$app_image_manifest test/
+cp ../$start/$app_image_manifest test/
 
 # Delete already existing gsc image for the base image
 docker rmi -f gsc-$app_image >/dev/null 2>&1
