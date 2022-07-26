@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
+import docker
 import os.path
 from os import path
 import subprocess
 import sys
 
+def get_docker_image(docker_socket, image_name):
+    try:
+        docker_image = docker_socket.images.get(image_name)
+        return docker_image
+    except (docker.errors.ImageNotFound, docker.errors.APIError):
+        return None
 
 def main(argv):
     if len(argv) < 2:
@@ -15,6 +22,13 @@ def main(argv):
     # Acquiring Base image type and name from user input
     base_image_type=argv[1].split('/', maxsplit=1)[0]
     base_image_name=argv[1].split('/', maxsplit=1)[1]
+    gsc_app_image='gsc-{}-wrapper'.format(base_image_name)
+
+    docker_socket = docker.from_env()
+    base_image = get_docker_image(docker_socket, base_image_name)
+    if base_image is None:
+        print(f'Error: Cannot find application Docker image `{base_image_name}`.\n')
+        sys.exit(1)
 
     # Generating Test Image
     if len(argv) == 3:
@@ -22,7 +36,7 @@ def main(argv):
             args_test='./curation_script_for_test_image.sh' + ' ' + base_image_type + ' ' + base_image_name
             print(args_test)
             subprocess.call(args_test, shell=True)
-            return 1
+            sys.exit(1)
 
     # Generating Customized image
     # Signing key
@@ -106,6 +120,25 @@ def main(argv):
     args ='./curation_script.sh' + ' ' + base_image_type + ' ' + base_image_name + ' ' + key_path + ' ' + attestation_required + ' ' + ca_cert_path + ' ' + env_required + ' ' + envs + ' ' + encrypted_files_required + ' ' + ef_files
 
     subprocess.call(args, shell=True)
+
+    gsc_image = get_docker_image(docker_socket, gsc_app_image)
+    if gsc_image is None:
+        print(f'\n\n\n`{gsc_app_image}` creation failed, exiting.....\n\n')
+        sys.exit(1)
+    print(f'\n\n\n#################### We are going to run the "gsc-$app_image" image ####################\n\n\n')
+
+    if attestation_required == 'y':
+        print(f'Please ensure your remote attestation verifier is ready to accept the connection **from this device/container**')
+        print(f'\n\nYou can start the verifier using the below command\n')
+        print(f'docker run  --net=host  --device=/dev/sgx/enclave  -it verifier_image:latest')
+        print(f'\n\n\nYou can run the {gsc_app_image} using the below command\n')
+        print(f'Please use the below commmand, if the verifier is running on localhost')
+        print(f'docker run --net=host --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=\"localhost:4433\" -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it {gsc_app_image}')
+        print(f'\n\nIf the verifier is not running on the localhost, then use below command')
+        print(f'docker run --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=<server-dns_name:port> -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it {gsc_app_image}')
+    else:
+        print(f'\n\nYou can run the {gsc_app_image} using the below command')
+        print(f'docker run  --device=/dev/sgx/enclave -it {gsc_app_image}')
     return 0
 
 if __name__ == '__main__':

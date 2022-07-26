@@ -20,20 +20,8 @@ sed -i 's|.*ca.crt.*|# COPY ca.crt /ca.crt|' $wrapper_dockerfile
 sed -i '0,/# Based on user input the manifest file will automatically be modified after this line/I!d' $app_image_manifest
 
 
-# Get Base image name
+# Set base image name in the dockerfile
 base_image="$2"
-while [ "$(docker images -q "$base_image" 2> /dev/null)" == "" ];
-    do
-        echo ""$base_image" is not present locally, hence fetching from dockerhub"
-        docker pull $base_image
-        if [[ "$(docker images -q "$base_image" 2> /dev/null)" == "" ]]; then
-            read -p "Please specify a correct base image name -> " base_image
-            while [ -z "${base_image}" ];
-            do
-                read -p "No base image provided by the user, please provide a valid base image -> " base_image
-            done
-        fi
-    done
 sed -i 's|From.*|From '$base_image'|' $wrapper_dockerfile
 
 app_image=$base_image"-wrapper"
@@ -177,36 +165,4 @@ echo ""
 ./gsc sign-image $app_image enclave-key.pem
 
 cd ../
-if [[ "$(docker images -q "gsc-$app_image" 2> /dev/null)" == "" ]]; then
-    echo ""
-    echo ""
-    echo ""gsc-$app_image" creation failed, exiting .... "
-    echo ""
-    exit 1
-else
-    echo ""
-    echo ""
-    echo "#################### We are going to run the "gsc-$app_image" image ####################"
-    echo ""
-    echo ""
-    if [ "$attestation_required" = "y" ]; then
-        echo "Please ensure your remote attestation verifier is ready to accept the connection **from this device/container**"
-        echo "You can start the verifier using the below command"
-	echo "docker run  --net=host  --device=/dev/sgx/enclave  -it verifier_image:latest"
-        echo ""
-	echo ""
-        echo "You can run the gsc-"$app_image" using the below command:"
-	echo ""
-	echo "Please use the below commmand, if the verifier is running on localhost"
-	echo "docker run --net=host --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=\"localhost:4433\" -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
-	echo ""
-	echo ""
-	echo "If the verifier is not running on the localhost, then use below command"
-        echo "docker run --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS=<server-dns_name:port> -v /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket -it gsc-$app_image"
-    else
-        echo "You can run the gsc-"$app_image" using the below command: "
-        echo "docker run  --device=/dev/sgx/enclave -it gsc-$app_image"
-    fi
-fi
-
 rm -rf gsc >/dev/null 2>&1
