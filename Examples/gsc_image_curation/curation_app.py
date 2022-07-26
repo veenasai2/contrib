@@ -50,7 +50,7 @@ def main(argv):
         attestation_required = input('y/n: ')
 
     # Verifier image generation based on attestation input
-    ca_cert_path=''
+    ca_cert_path='dummy_ca_path'
     if attestation_required == 'y':
        print(f'\n\n\n##### We are going to generate the verifier docker image first #####\n\n\n')
 
@@ -75,14 +75,14 @@ def main(argv):
         print(f'\nYou have entered a wrong option, please type y or n only')
         env_required = input(f'y/n: ')
 
-    envs=''
+    envs='dummy_env_var'
     if env_required == 'y':
         envs =input(f'Please specify a list of env variables and respective values separated by comma'
                        '(accepted format: name="Xyz",age="20") -> ')
 
     # Encrypted Files
     encrypted_files_required='n'
-    ef_files=''
+    ef_files='dummy_encrypted_files'
     if attestation_required == 'y':
         print(f'\nDo you need to provide encrytped files?')
         print(f'Please ensure the encrypted files are part of the base image dockerfile.')
@@ -104,10 +104,9 @@ def main(argv):
             ef_files=input(f'Your input here -> ')
 
     args ='./curation_script.sh' + ' ' + base_image_type + ' ' + base_image_name + ' ' + key_path + ' ' + attestation_required + ' ' + ca_cert_path + ' ' + env_required + ' ' + envs + ' ' + encrypted_files_required + ' ' + ef_files
-    print(args)
+
     subprocess.call(args, shell=True)
     return 0
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+
+if [ $# != 9 ] ; then
+        echo "Expected 9 parameters"
+        exit 1
+fi
+
 start=$1
 
 wrapper_dockerfile=$start"-gsc.dockerfile"
@@ -45,12 +51,14 @@ if [ "$signing_key_path" = "test-key" ]; then
 fi
 
 # Get Attestation Input
-attestation_required = $4
+attestation_required=$4
 
 if [ "$attestation_required" = "y" ]; then
 
-    ca_cert_path = $5
-    cp $ca_cert_path ca.crt
+    ca_cert_path=$5
+    cd ../  #exiting start directory as the path to the ca cert can be w.r.t to gsc_image_curation directory
+    cp $ca_cert_path $start/ca.crt
+    cd $start
     sed -i 's|.*ca.crt.*|COPY ca.crt /ca.crt|' $wrapper_dockerfile
     echo '' >> $app_image_manifest
     echo '# Attestation related entries' >> $app_image_manifest
@@ -66,7 +74,7 @@ if [ "$attestation_required" = "y" ]; then
 fi
 
 # Environment Variables:
-env_required = $6
+env_required=$6
 
 if [ "$env_required" = "y" ]; then
     envs=$7
