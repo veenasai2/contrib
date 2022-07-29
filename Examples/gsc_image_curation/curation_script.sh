@@ -7,7 +7,6 @@ if [ $# != 9 ] ; then
 fi
 
 start=$1
-
 wrapper_dockerfile=$start"-gsc.dockerfile"
 app_image_manifest=$start".manifest"
 
@@ -73,7 +72,10 @@ if [ "$env_required" = "y" ]; then
     for i in "${env_list[@]}"
     do
         env_string='loader.env.'
-        env_string+=$i
+	IFS='='
+	read -a env <<<"$i"
+        env_string+=${env[0]}'="'
+	env_string+=${env[1]}'"'
 	echo "$env_string" >> $app_image_manifest
     done
     echo ""
