@@ -73,7 +73,7 @@ def main(argv):
             print(f'\n\nYou can run the {gsc_app_image} using the below command')
             print(f'docker run  --device=/dev/sgx/enclave -it {gsc_app_image}')
 
-            sys.exit(1)
+            return 1
 
     # Generating Customized image
     # Signing key
