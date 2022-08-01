@@ -110,9 +110,6 @@ fi
 
 
 # Generating wrapper for base image
-echo ""
-echo "******************************* Generating Wrapper Image for Base Image *******************************"
-echo ""
 
 docker rmi -f $app_image >/dev/null 2>&1
 docker build -f $wrapper_dockerfile -t $app_image .
@@ -127,13 +124,8 @@ cd ..
 # Download gsc that has dcap already enabled
 echo ""
 rm -rf gsc >/dev/null 2>&1
-# git clone https://github.com/gramineproject/gsc.git
 
-# Todo: Remove these steps once https://github.com/gramineproject/gsc/pull/70
-git clone https://github.com/aneessahib/gsc.git
-cd gsc
-git checkout binary_path
-cd ../
+git clone https://github.com/gramineproject/gsc.git
 
 cp $signing_key_path gsc/enclave-key.pem
 
@@ -157,8 +149,6 @@ cp ../$start/$app_image_manifest test/
 docker rmi -f gsc-$app_image >/dev/null 2>&1
 docker rmi -f gsc-$app_image-unsigned >/dev/null 2>&1
 
-echo ""
-echo "******************************* GSC Image is ready to run *******************************"
 echo ""
 
 ./gsc build $app_image  test/$app_image_manifest

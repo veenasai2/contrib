@@ -28,14 +28,12 @@ docker build -f $wrapper_dockerfile -t $app_image .
 cd ..
 
 # Download gsc that has dcap already enabled
+
 echo ""
 rm -rf gsc >/dev/null 2>&1
-# git clone https://github.com/gramineproject/gsc.git
 
-# Todo: Remove these steps once https://github.com/gramineproject/gsc/pull/70
-git clone https://github.com/aneessahib/gsc.git
+git clone https://github.com/gramineproject/gsc.git
 cd gsc
-git checkout binary_path
 
 cp config.yaml.template config.yaml
 openssl genrsa -3 -out enclave-key.pem 3072
@@ -61,20 +59,3 @@ echo ""
 # Exit from gsc directory
 cd ../
 rm -rf gsc >/dev/null 2>&1
-if [[ "$(docker images -q "gsc-$app_image" 2> /dev/null)" == "" ]]; then
-    echo ""
-    echo ""
-    echo ""gsc-$app_image" creation failed, exiting .... "
-    echo ""
-    exit 1
-else
-    echo ""
-    echo "You can run the gsc-"$app_image" using the below command: "
-    echo ""
-    echo "docker run  --device=/dev/sgx/enclave -it gsc-$app_image"
-fi
-exit 1
-
-
-
-
