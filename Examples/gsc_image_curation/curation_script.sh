@@ -1,11 +1,5 @@
 #!/bin/bash
 
-
-if [ $# != 9 ] ; then
-        echo "Expected 9 parameters"
-        exit 1
-fi
-
 start=$1
 wrapper_dockerfile=$start"-gsc.dockerfile"
 app_image_manifest=$start".manifest"
@@ -25,6 +19,58 @@ sed -i 's|From.*|From '$base_image'|' $wrapper_dockerfile
 
 app_image=$base_image"-wrapper"
 
+create_base_wrapper_image () {
+
+    docker rmi -f $app_image >/dev/null 2>&1
+    docker build -f $wrapper_dockerfile -t $app_image .
+}
+
+
+create_gsc_image () {
+
+    # Download gsc that has dcap already enabled
+    echo ""
+    rm -rf gsc >/dev/null 2>&1
+
+    git clone https://github.com/gramineproject/gsc.git
+
+    cp $signing_key_path gsc/enclave-key.pem
+
+    # delete the signing key created by the script
+    rm enclave-key.pem >/dev/null 2>&1
+
+    cd gsc
+    cp config.yaml.template config.yaml
+
+    # ToDo: Remove these two lines once https://github.com/gramineproject/gramine/pull/722 and https://github.com/gramineproject/gramine/pull/721 merged
+    sed -i 's|    Repository: "https://github.com/gramineproject/gramine.git"|    Repository: "https://github.com/aneessahib/gramine.git"|' config.yaml
+    sed -i 's|v1.2|script_secret2|' config.yaml
+
+    # Set SGX driver as dcap (this helps to generated an Azure compatible image)
+    sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
+    sed -i 's|    Branch:     ""|    Branch:     "DCAP_1.11 \&\& cp -r driver/linux/* ."|' config.yaml
+
+    cp ../$start/$app_image_manifest test/
+    cd templates
+    sed -i 's|sgx.debug = {% if debug %} true {% else %} false {% endif %}|# sgx.debug = {% if debug %} true {% else %} false {% endif %}|' entrypoint.common.manifest.template
+    cd ..
+
+    # Delete already existing gsc image for the base image
+    docker rmi -f gsc-$app_image >/dev/null 2>&1
+    docker rmi -f gsc-$app_image-unsigned >/dev/null 2>&1
+
+    echo ""
+
+    ./gsc build $app_image  test/$app_image_manifest
+    echo ""
+    echo ""
+    ./gsc sign-image $app_image enclave-key.pem
+
+    cd ../
+    rm -rf gsc >/dev/null 2>&1
+}
+
+
 # Signing key
 echo ""
 signing_key_path="$3"
@@ -35,7 +81,17 @@ if [ "$signing_key_path" = "test-key" ]; then
     openssl genrsa -3 -out enclave-key.pem 3072
     signing_key_path="enclave-key.pem"
     cd $start
+    echo 'sgx.debug = true' >> $app_image_manifest
 fi
+
+if [ "$4" = "test-image" ]; then
+    create_base_wrapper_image
+    # Exit from $start directory
+    cd ..
+    create_gsc_image
+    exit 1
+fi
+
 
 # Get Attestation Input
 attestation_required=$4
@@ -111,8 +167,7 @@ fi
 
 # Generating wrapper for base image
 
-docker rmi -f $app_image >/dev/null 2>&1
-docker build -f $wrapper_dockerfile -t $app_image .
+create_base_wrapper_image
 echo ""
 if [ "$attestation_required" = "y" ]; then
     rm ca.crt
@@ -121,40 +176,4 @@ fi
 # Exit from $start directory
 cd ..
 
-# Download gsc that has dcap already enabled
-echo ""
-rm -rf gsc >/dev/null 2>&1
-
-git clone https://github.com/gramineproject/gsc.git
-
-cp $signing_key_path gsc/enclave-key.pem
-
-# delete the signing key created by the script
-rm enclave-key.pem >/dev/null 2>&1
-
-cd gsc
-cp config.yaml.template config.yaml
-
-# ToDo: Remove these two lines once https://github.com/gramineproject/gramine/pull/722 and https://github.com/gramineproject/gramine/pull/721 merged
-sed -i 's|    Repository: "https://github.com/gramineproject/gramine.git"|    Repository: "https://github.com/aneessahib/gramine.git"|' config.yaml
-sed -i 's|v1.2|script_secret2|' config.yaml
-
-# Set SGX driver as dcap (this helps to generated an Azure compatible image)
-sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
-sed -i 's|    Branch:     ""|    Branch:     "DCAP_1.11 \&\& cp -r driver/linux/* ."|' config.yaml
-
-cp ../$start/$app_image_manifest test/
-
-# Delete already existing gsc image for the base image
-docker rmi -f gsc-$app_image >/dev/null 2>&1
-docker rmi -f gsc-$app_image-unsigned >/dev/null 2>&1
-
-echo ""
-
-./gsc build $app_image  test/$app_image_manifest
-echo ""
-echo ""
-./gsc sign-image $app_image enclave-key.pem
-
-cd ../
-rm -rf gsc >/dev/null 2>&1
+create_gsc_image

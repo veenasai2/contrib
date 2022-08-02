@@ -65,8 +65,9 @@ def main(argv):
     # Generating Test Image
     if len(argv) == 3:
         if argv[2].startswith('test'):
-            args_test='./curation_script_for_test_image.sh' + ' ' + base_image_type +\
-                            ' ' + base_image_name
+            args_test='./curation_script.sh' + ' ' + base_image_type +\
+                            ' ' + base_image_name + ' '+ 'test-key' + ' ' + 'test-image'
+
             print(args_test)
             subprocess.call(args_test, shell=True)
             check_gsc_image_success(docker_socket,gsc_app_image)
@@ -172,7 +173,7 @@ def main(argv):
     check_gsc_image_success(docker_socket,gsc_app_image)
     print(f'\n\n\n#################### We are going to run the {gsc_app_image} image #############'
            '#######\n')
-
+    print(f'Note: This image is generated for DCAP 1.11 specified in gsc/config.yaml.template\n')
     if attestation_required == 'y':
         print(f'Please ensure your remote attestation verifier is ready to accept the connection'
                ' **from this device/container**')
