@@ -96,33 +96,6 @@ def main(argv):
             if(len(key_path) == 0):
                 key_path="test-key"
                 break
-    # Get Attestation Input
-    print(f'\nDo you require remote attestation (DCAP)(https://gramine.readthedocs.io/en/stable/'
-           'attestation.html)?')
-    print(f'[Note: attestation is required for gramine to process encrypted files]')
-    attestation_required = input('y/n: ')
-    while attestation_required != 'y' and attestation_required !='n':
-        print(f'\nYou have entered a wrong option, please type y or n only')
-        attestation_required = input('y/n: ')
-
-    # Verifier image generation based on attestation input
-    ca_cert_path='dummy_ca_path'
-    if attestation_required == 'y':
-       print(f'\n\n\n##### We are going to generate the verifier docker image first #####\n\n\n')
-
-       os.chdir('verifier_image')
-       args_verifier ='./verifier_helper_script.sh'
-       subprocess.call(args_verifier, shell=True)
-       os.chdir('../')
-
-       print(f'\n\nPlease specify path to your verifier ca certificate (crt format only)')
-       ca_cert_path=input(f'Suggestions : verifier_image/ca.crt  -> ')
-       while not path.exists(ca_cert_path):
-           print(f'Error: {ca_cert_path} file does not exist.')
-           ca_cert_path=input(f'Please specify a correct ca certificate file with **absolute path**'
-                               ' (crt format only) -> ')
-           print(f'You have given the following ca cert path: {ca_cert_path}')
-
 
     # Environment Variables
     print(f'\nDo you have any runtime environment variables to provide?')
@@ -137,6 +110,15 @@ def main(argv):
     if env_required == 'y':
         envs =input(f'Please specify a list of env variables and respective values separated by comma'
                      ' (accepted format: name="Xyz",age="20") -> ')
+
+    # Get Attestation Input
+    print(f'\nDo you require remote attestation (DCAP)(https://gramine.readthedocs.io/en/stable/'
+           'attestation.html)?')
+    print(f'[Note: attestation is required for gramine to process encrypted files]')
+    attestation_required = input('y/n: ')
+    while attestation_required != 'y' and attestation_required !='n':
+        print(f'\nYou have entered a wrong option, please type y or n only')
+        attestation_required = input('y/n: ')
 
     # Encrypted Files
     encrypted_files_required='n'
@@ -162,6 +144,52 @@ def main(argv):
                    ' based image, the encrypted files input would be --> ')
             print(f'classes.txt:input.jpg:alexnet-pretrained.pt:app/result.txt')
             ef_files=input(f'Your input here -> ')
+
+    # Verifier image generation based on attestation input
+    ca_cert_path='dummy_ca_path'
+    if attestation_required == 'y':
+       print(f'\n\n\n##### We are going to generate the verifier docker image first #####\n\n\n')
+
+       # Getting verifier cert input from the user
+       print(f'Do you have certs to provide?')
+       print(f'Please get familiar with the certificate format here:'
+              'https://github.com/gramineproject/contrib/tree/master/Examples/aks-attestation/ssl')
+       print(f'[Note: If you press ENTER then test certificates will be generated automatically'
+              'with Common Name=localhost and those must not be used in production ]')
+       cert_available=input(f'type y or press ENTER ?')
+       if len(cert_available) == 0:
+           cert_available != 'n'
+           ca_cert_path='verifier_image/ca.crt'
+       else:
+           while cert_available != 'y':
+               print(f'\nYou have entered a wrong option, please type y or press ENTER')
+               cert_available = input(f' y/ENTER ?')
+       if cert_available == 'y':
+           print(f'Please open another terminal window and copy the ca.crt, server.crt,'
+                   'and server.key certificates to gsc_image_curation/verifier_image/ssl'
+                   ' directory')
+           input(f'Press any key to proceed')
+           ca_cert_path='verifier_image/ssl/ca.crt'
+           while not path.exists(ca_cert_path):
+               print(f'\nError: {ca_cert_path} file does not exist.')
+               print(f'Please copy ca.crt to gsc_image_curation/verifier_image/ssl/ directory')
+               input(f'Press any key to proceed')
+           server_cert_path='verifier_image/ssl/server.crt'
+           while not path.exists(server_cert_path):
+               print(f'\nError: {server_cert_path} file does not exist.')
+               print(f'Please copy server.crt to gsc_image_curation/verifier_image/ssl/ directory')
+               input(f'Press any key to proceed')
+           server_key_path='verifier_image/ssl/server.key'
+           while not path.exists(server_key_path):
+               print(f'\nError: {server_key_path} file does not exist.')
+               print(f'Please copy server.key to gsc_image_curation/verifier_image/ssl/ directory')
+               input(f'Press any key to proceed')
+
+       os.chdir('verifier_image')
+       args_verifier ='./verifier_helper_script.sh' + ' ' + cert_available
+       subprocess.call(args_verifier, shell=True)
+       os.chdir('../')
+
 
     args ='./curation_script.sh' + ' ' + base_image_type + ' ' + base_image_name + ' ' + key_path +\
                                    ' ' + attestation_required + ' ' + ca_cert_path + ' ' +\
