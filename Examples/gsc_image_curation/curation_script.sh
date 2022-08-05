@@ -17,7 +17,7 @@ sed -i '0,/# Based on user input the manifest file will automatically be modifie
 base_image="$2"
 sed -i 's|From.*|From '$base_image'|' $wrapper_dockerfile
 
-app_image=$base_image"_"
+app_image=$base_image"x"
 
 create_base_wrapper_image () {
 

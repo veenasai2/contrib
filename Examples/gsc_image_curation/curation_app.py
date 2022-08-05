@@ -71,7 +71,7 @@ def main(argv):
             '###################\n\n')
     print(f'Note: Current version of this script tested for redis and pytorch only\n')
 
-    gsc_app_image='gsc-{}_'.format(base_image_name)
+    gsc_app_image='gsc-{}x'.format(base_image_name)
 
     docker_socket = docker.from_env()
     base_image = get_docker_image(docker_socket, base_image_name)
