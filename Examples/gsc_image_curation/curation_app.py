@@ -21,15 +21,20 @@ def pull_docker_image(docker_socket, image_name):
         print(f'Please check the image name is correct and try again.')
         return -1
 
-def check_gsc_image_success(docker_socket, gsc_image_name):
-    gsc_image = get_docker_image(docker_socket, gsc_image_name)
-    if gsc_image is None:
-        print(f'\n\n\n`{gsc_image_name}` creation failed, exiting.....\n\n')
+def check_image_creation_success(docker_socket, image_name, log_file):
+    image = get_docker_image(docker_socket, image_name)
+    if image is None:
+        print(f'\n\n\n`{image_name}` creation failed, exiting....')
+        print(f'You can look at the logs file here: {log_file}\n\n')
         sys.exit(1)
 
 def correct_usage_message(arg):
-    print(f'\nUsage: {arg} <redis/redis:7.0.0> (for custom image)', file=sys.stderr)
-    print(f'Usage: {arg} <redis/redis:7.0.0> test (for test image)', file=sys.stderr)
+    print(f'\nUsage: {arg} <redis/redis:7.0.0> (for custom image)')
+    print(f'Usage: {arg} <redis/redis:7.0.0> test (for test image)')
+    print(f'\nUsage: {arg} -d <redis/redis:7.0.0> (for custom image with debug logs)')
+    print(f'Usage: {arg} -d <redis/redis:7.0.0> test (for test image with debug logs)')
+
+
     sys.exit(1)
 
 
@@ -37,15 +42,29 @@ def main(argv):
     if len(argv) < 2:
         correct_usage_message(argv[0])
 
+    gsc_image_with_debug='false'
+    index_for_base_image_in_argv = 1
+    index_for_test_flag_in_argv = 2
+    # min length of argv is the length of argv without test flag
+    min_length_of_argv = 2
+
+    # Checking if debug flag is specified by the user
+    if argv[1] == '-d':
+       gsc_image_with_debug='true'
+       index_for_base_image_in_argv+=1
+       index_for_test_flag_in_argv+=1
+       min_length_of_argv+=1
+
     # Acquiring Base image type and name from user input
-    if '/' in argv[1]:
-        base_image_type=argv[1].split('/', maxsplit=1)[0]
-        base_image_name=argv[1].split('/', maxsplit=1)[1]
+    base_image_input=argv[index_for_base_image_in_argv]
+    if '/' in base_image_input:
+        base_image_type=base_image_input.split('/', maxsplit=1)[0]
+        base_image_name=base_image_input.split('/', maxsplit=1)[1]
         if base_image_type is '' or  base_image_name is '':
-            print(f'\nIncorrect format: {argv[1]}', file=sys.stderr)
+            print(f'\nIncorrect format: {base_image_input}', file=sys.stderr)
             correct_usage_message(argv[0])
     else:
-         print(f'\nIncorrect format: {argv[1]}', file=sys.stderr)
+         print(f'\nIncorrect format: {base_image_input}', file=sys.stderr)
          correct_usage_message(argv[0])
 
     print(f'\n################################# Welcome to GSC Image Curation Script ##############'
@@ -62,12 +81,19 @@ def main(argv):
         if pull_docker_image(docker_socket, base_image_name) == -1:
             sys.exit(1)
 
+    args=''
+    log_file=base_image_type+'/'+base_image_name+'.log'
+    log_file_pointer = open(log_file, 'w')
+
     # Generating Test Image
-    if len(argv) == 3:
-        if argv[2].startswith('test'):
-            args=''
-            subprocess.call(["./curation_script.sh", base_image_type, base_image_name, "test-key", args, "test-image"])
-            check_gsc_image_success(docker_socket,gsc_app_image)
+    if len(argv) > min_length_of_argv:
+        if argv[index_for_test_flag_in_argv]:
+    #        args=''
+    #        log_file=base_image_name+'.log'
+    #        log_file_pointer = open(log_file, 'w')
+            subprocess.call(["./curation_script.sh", base_image_type, base_image_name, "test-key",
+                args, "test-image", gsc_image_with_debug],stdout=log_file_pointer)
+            check_image_creation_success(docker_socket,gsc_app_image,log_file)
             print(f'\n\nYou can run the {gsc_app_image} using the below command')
             print(f'docker run  --device=/dev/sgx/enclave -it {gsc_app_image}')
 
@@ -104,7 +130,6 @@ def main(argv):
         print(f'\nYou have entered a wrong option, please type y or n only')
         args_required = input(f'y/n: ')
 
-    args=''
     if args_required == 'y':
         args =input(f'Please specify args as a string -> ')
         print(args)
@@ -147,7 +172,8 @@ def main(argv):
         while encrypted_files_required != 'y' and encrypted_files_required !='n':
             print(f'\nYou have entered a wrong option, please type y or n only')
             encrypted_files_required = input(f'y/n: ')
-
+        
+        encryption_key = ''
         if encrypted_files_required == 'y':
             print(f'\nPlease provide the path to the encrypted files in the base image separated by'
                    ' a colon (:)')
@@ -156,6 +182,12 @@ def main(argv):
                    ' based image, the encrypted files input would be --> ')
             print(f'classes.txt:input.jpg:alexnet-pretrained.pt:app/result.txt')
             ef_files=input(f'Your input here -> ')
+
+            encryption_key = input(f'\nPlease provide absolute path to your encryption key -> ')
+
+            while not path.exists(encryption_key):
+                print(f'\nError: {encryption_key} file does not exist.')
+                encryption_key = input(f'Please specify a correct key file with **absolute path** -> ')
 
     # Verifier image generation based on attestation input
     ca_cert_path='dummy_ca_path'
@@ -198,16 +230,18 @@ def main(argv):
                input(f'Press any key to proceed')
 
        os.chdir('verifier_image')
-       args_verifier ='./verifier_helper_script.sh' + ' ' + cert_available
-       subprocess.call(args_verifier, shell=True)
+       verifier_log_file='verifier-'+base_image_name+'.log'
+       verifier_log_file_pointer = open(verifier_log_file, 'w')
+       subprocess.call(["./verifier_helper_script.sh", cert_available],stdout=verifier_log_file_pointer)
        os.chdir('../')
+       check_image_creation_success(docker_socket,'verifier_image:latest','verifier_image/'+verifier_log_file)
 
 
     subprocess.call(["./curation_script.sh", base_image_type, base_image_name, key_path, args,
                   attestation_required, ca_cert_path, env_required, envs, encrypted_files_required,
-                  ef_files])
+                  ef_files, gsc_image_with_debug],stdout=log_file_pointer)
 
-    check_gsc_image_success(docker_socket,gsc_app_image)
+    check_image_creation_success(docker_socket,gsc_app_image,log_file)
     print(f'\n\n\n#################### We are going to run the {gsc_app_image} image #############'
            '#######\n')
     print(f'Note: This image is generated for DCAP 1.11 specified in gsc/config.yaml.template\n')

@@ -50,7 +50,6 @@ create_gsc_image () {
     sed -i 's|    Repository: ""|    Repository: "https://github.com/intel/SGXDataCenterAttestationPrimitives.git"|' config.yaml
     sed -i 's|    Branch:     ""|    Branch:     "DCAP_1.11 \&\& cp -r driver/linux/* ."|' config.yaml
 
-    cp ../$start/$app_image_manifest test/
     cd templates
     sed -i 's|sgx.debug = {% if debug %} true {% else %} false {% endif %}|# sgx.debug = {% if debug %} true {% else %} false {% endif %}|' entrypoint.common.manifest.template
     cd ..
@@ -61,7 +60,12 @@ create_gsc_image () {
 
     echo ""
 
-    ./gsc build $app_image  test/$app_image_manifest
+    if [ "$1" = "true" ]; then
+	./gsc build -d $app_image  ../$start/$app_image_manifest
+    else
+        ./gsc build $app_image ../$start/$app_image_manifest
+    fi
+
     echo ""
     echo ""
     ./gsc sign-image $app_image enclave-key.pem
@@ -133,7 +137,7 @@ if [ "$5" = "test-image" ]; then
     create_base_wrapper_image
     # Exit from $start directory
     cd ..
-    create_gsc_image
+    create_gsc_image $6
     exit 1
 fi
 
