@@ -70,6 +70,27 @@ create_gsc_image () {
     rm -rf gsc >/dev/null 2>&1
 }
 
+fetch_base_image_config () {
+
+    base_image_config="$(docker image inspect "$base_image" | jq '.[].Config.'$1'')"
+    if [[ "$base_image_config" = "null" || "$base_image_config" = "Null" || "$base_image_config" = "NULL" ]]; then
+    #    echo "if part"
+	config_string=''
+    else
+        base_image_config=$(echo $base_image_config | sed 's/[][]//g')
+        IFS=',' #setting comma as delimiter
+        read -a base_image_config_list <<<"$base_image_config"
+        config_string=' '
+        for i in "${base_image_config_list[@]}"
+        do
+            i=$(echo $i | sed "s/\"//g")
+            config_string+=$i' '
+	  #  echo $i
+        done
+    fi
+    echo $config_string
+}
+
 
 # Signing key
 echo ""
@@ -84,7 +105,31 @@ if [ "$signing_key_path" = "test-key" ]; then
     echo 'sgx.debug = true' >> $app_image_manifest
 fi
 
-if [ "$4" = "test-image" ]; then
+# Runtime arguments:
+args=$4
+if [[ "$5" = "test-image" && "$start" = "redis" ]]; then
+    args="--protected-mode no --save ''"
+fi
+# Forming a complete binary string
+# (format: <Base image entrypoint> <Base image cmd> <user provided runtime args>)
+entrypoint_string=$(fetch_base_image_config "Entrypoint")
+cmd_string=$(fetch_base_image_config "Cmd")
+complete_binary_cmd=$entrypoint_string''$cmd_string''$args
+
+# Creating entrypoint script file
+entrypoint_script=entry_script_$start.sh
+rm -f $entrypoint_script >/dev/null 2>&1
+touch $entrypoint_script
+
+# Copying the complete binary string to the entrypoint script file
+echo "#!/bin/bash" >> $entrypoint_script
+echo "" >> $entrypoint_script
+echo "$complete_binary_cmd" >> $entrypoint_script
+
+
+
+# test image creation
+if [ "$5" = "test-image" ]; then
     create_base_wrapper_image
     # Exit from $start directory
     cd ..
@@ -94,11 +139,11 @@ fi
 
 
 # Get Attestation Input
-attestation_required=$4
+attestation_required=$5
 
 if [ "$attestation_required" = "y" ]; then
 
-    ca_cert_path=$5
+    ca_cert_path=$6
     cd ../  #exiting start directory as the path to the ca cert can be w.r.t to gsc_image_curation directory
     cp $ca_cert_path $start/ca.crt
     cd $start
@@ -117,10 +162,10 @@ if [ "$attestation_required" = "y" ]; then
 fi
 
 # Environment Variables:
-env_required=$6
+env_required=$7
 
 if [ "$env_required" = "y" ]; then
-    envs=$7
+    envs=$8
     IFS=',' #setting comma as delimiter
     read -a env_list <<<"$envs" #reading str as an array as tokens separated by IFS
     echo '' >> $app_image_manifest
@@ -128,21 +173,17 @@ if [ "$env_required" = "y" ]; then
     for i in "${env_list[@]}"
     do
         env_string='loader.env.'
-	IFS='='
-	read -a env <<<"$i"
-        env_string+=${env[0]}'="'
-	env_string+=${env[1]}'"'
+        env_string+=$i
 	echo "$env_string" >> $app_image_manifest
     done
     echo ""
 fi
 
-
 # Encrypted Files Section
-encrypted_files_required=$8
+encrypted_files_required=$9
 
 if [ "$encrypted_files_required" = "y" ]; then
-        ef_files=$9
+        ef_files=${10}
         IFS=':' #setting colon as delimiter
         read -a ef_files_list <<<"$ef_files"
         echo '' >> $app_image_manifest

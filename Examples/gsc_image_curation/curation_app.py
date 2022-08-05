@@ -65,11 +65,8 @@ def main(argv):
     # Generating Test Image
     if len(argv) == 3:
         if argv[2].startswith('test'):
-            args_test='./curation_script.sh' + ' ' + base_image_type +\
-                            ' ' + base_image_name + ' '+ 'test-key' + ' ' + 'test-image'
-
-            print(args_test)
-            subprocess.call(args_test, shell=True)
+            args=''
+            subprocess.call(["./curation_script.sh", base_image_type, base_image_name, "test-key", args, "test-image"])
             check_gsc_image_success(docker_socket,gsc_app_image)
             print(f'\n\nYou can run the {gsc_app_image} using the below command')
             print(f'docker run  --device=/dev/sgx/enclave -it {gsc_app_image}')
@@ -96,6 +93,21 @@ def main(argv):
             if(len(key_path) == 0):
                 key_path="test-key"
                 break
+
+
+    # Runtime arguments
+    print(f'\nDo you have any runtime args to provide?')
+    print(f'[Note: Gramine will ignore any args specified at runtime, so please ensure you provide'
+           ' that here only]')
+    args_required = input(f'y/n: ')
+    while args_required != 'y' and args_required !='n':
+        print(f'\nYou have entered a wrong option, please type y or n only')
+        args_required = input(f'y/n: ')
+
+    args=''
+    if args_required == 'y':
+        args =input(f'Please specify args as a string -> ')
+        print(args)
 
     # Environment Variables
     print(f'\nDo you have any runtime environment variables to provide?')
@@ -191,12 +203,9 @@ def main(argv):
        os.chdir('../')
 
 
-    args ='./curation_script.sh' + ' ' + base_image_type + ' ' + base_image_name + ' ' + key_path +\
-                                   ' ' + attestation_required + ' ' + ca_cert_path + ' ' +\
-                                   env_required + ' ' + envs + ' ' + encrypted_files_required +\
-                                   ' ' + ef_files
-
-    subprocess.call(args, shell=True)
+    subprocess.call(["./curation_script.sh", base_image_type, base_image_name, key_path, args,
+                  attestation_required, ca_cert_path, env_required, envs, encrypted_files_required,
+                  ef_files])
 
     check_gsc_image_success(docker_socket,gsc_app_image)
     print(f'\n\n\n#################### We are going to run the {gsc_app_image} image #############'
