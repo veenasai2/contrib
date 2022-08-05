@@ -71,7 +71,7 @@ def main(argv):
             '###################\n\n')
     print(f'Note: Current version of this script tested for redis and pytorch only\n')
 
-    gsc_app_image='gsc-{}-wrapper'.format(base_image_name)
+    gsc_app_image='gsc-{}_'.format(base_image_name)
 
     docker_socket = docker.from_env()
     base_image = get_docker_image(docker_socket, base_image_name)
@@ -119,7 +119,9 @@ def main(argv):
             if(len(key_path) == 0):
                 key_path="test-key"
                 break
-
+    debug_enclave_command_for_verifier=''
+    if key_path == "test-key":
+        debug_enclave_command_for_verifier='-e RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 -e RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1'
 
     # Runtime arguments
     print(f'\nDo you have any runtime args to provide?')
@@ -249,7 +251,7 @@ def main(argv):
         print(f'Please ensure your remote attestation verifier is ready to accept the connection'
                ' **from this device/container**')
         print(f'\n\nYou can start the verifier using the below command\n')
-        print(f'docker run  --net=host  --device=/dev/sgx/enclave  -it verifier_image:latest')
+        print(f'docker run  --net=host {debug_enclave_command_for_verifier} --device=/dev/sgx/enclave  -it verifier_image:latest {encryption_key}')
         print(f'\n\n\nYou can run the {gsc_app_image} using the below command\n')
         print(f'Please use the below commmand, if the verifier is running on localhost')
         print(f'docker run --net=host --device=/dev/sgx/enclave -e SECRET_PROVISION_SERVERS='\

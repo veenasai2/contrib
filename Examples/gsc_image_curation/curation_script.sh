@@ -17,7 +17,7 @@ sed -i '0,/# Based on user input the manifest file will automatically be modifie
 base_image="$2"
 sed -i 's|From.*|From '$base_image'|' $wrapper_dockerfile
 
-app_image=$base_image"-wrapper"
+app_image=$base_image"_"
 
 create_base_wrapper_image () {
 
@@ -111,8 +111,8 @@ fi
 
 # Runtime arguments:
 args=$4
-if [[ "$5" = "test-image" && "$start" = "redis" ]]; then
-    args="--protected-mode no --save ''"
+if [[ "$start" = "redis" ]]; then
+    args+="--protected-mode no --save ''"
 fi
 # Forming a complete binary string
 # (format: <Base image entrypoint> <Base image cmd> <user provided runtime args>)
